@@ -11,7 +11,13 @@ class RevolveSurface(ThreeDScene):
             x_length=5,
             y_length=5,
             z_length=5,
-            axis_config={"color": GREY}
+            axis_config={
+                "color": GREY,
+                "include_tip": True,
+                "tip_shape": ArrowTriangleFilledTip,
+                "tip_width": 0.15,
+                "tip_height": 0.15,
+            }
         )
 
         # Remove the z axis
@@ -57,7 +63,7 @@ class RevolveSurface(ThreeDScene):
             u_range=[0, 4],
             v_range=[0, angle_tracker.get_value()],
             resolution=(30, 30),
-            fill_opacity=0.6,
+            fill_opacity=0.4,
             checkerboard_colors=[BLUE_D, BLUE_E]
         ))
 
@@ -65,17 +71,21 @@ class RevolveSurface(ThreeDScene):
 
         # Animate the surface sweeping around the x-axis
         self.play(
+            FadeOut(curve_3d),
             angle_tracker.animate.set_value(TAU),
             run_time=5,
-            rate_func=linear
+            rate_func=linear,
         )
 
         self.wait()
 
+        # Animate camera back to original view
+        self.move_camera(phi=0 * DEGREES, theta=-90 * DEGREES, run_time=2)
+
         # Define the disc (ring shape) at x = 2
         x_val = 2
         radius = func(x_val)
-        thickness = 0.10
+        thickness = 0.05
 
         # Parametrize a thick ring-like disc using Surface
         disc = Surface(
@@ -95,14 +105,47 @@ class RevolveSurface(ThreeDScene):
         self.wait(1)
 
         # Animate: Move disc to the side
-        self.play(disc.animate.shift(axes.c2p(8, 0, 0)), run_time=2)
+        # Calculate the shift vector explicitly
+        target_x = 7.5
+        original_center = axes.c2p(x_val, 0, 0)
+        target_center = axes.c2p(target_x, 0, 0)
+        shift_vector = target_center - original_center
 
-        # Animate camera back to original view
-        self.move_camera(phi=0 * DEGREES, theta=-90 * DEGREES, run_time=2)
+        self.play(disc.animate.shift(shift_vector), run_time=2)
+
 
         # Rotate disc to face camera (xy-plane facing forward)
         self.play(disc.animate.rotate(-PI / 2, axis=UP), run_time=2)
 
         self.wait()
 
+
+
+        # Step 2: Show the center of the disc and draw a radius line
+        center = target_center
+        edge = axes.c2p(target_x, radius, 0)
+        radius_line = Line(start=center, end=edge, color=WHITE)
+        center_dot = Dot(center, color=WHITE)
+
+        # Place formula above the disc center
+        formula = MathTex("A = \\pi r^2")
+        formula.next_to(center, UP, buff=3)
+        self.play(Write(formula))
+
+
+
+        self.play(Create(radius_line), FadeIn(center_dot))
+        self.wait()
+
+        # Step 3: Label the radius as f(x)
+        radius_label = MathTex("f(x)").next_to(radius_line, RIGHT, buff=0.2)
+        self.play(Write(radius_label))
+        self.wait()
+
+        # Step 4: Morph the r in πr^2 to f(x)
+        fx_formula = MathTex("A = \\pi f(x)^2")
+        fx_formula.move_to(formula)
+
+        self.play(TransformMatchingTex(formula, fx_formula))
+        self.wait()
 
